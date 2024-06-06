@@ -102,6 +102,22 @@ public function showCurrentDateAttendance()
         // Pass the data to the view
         return view('admin.atten-perdate', compact('attendanceData'));
     }
+    public function showEmployeeSalaries(){
+        // Get the current date
+        $currentDate = now()->toDateString();
+    
+        // Assuming 'attendance' is the name of your table
+        $salaryData = DB::table('attendance')
+            ->join('employee', 'attendance.user_id', '=', 'employee.id')
+            ->select('attendance.*', 'employee.name as employee_name','employee.emptype','employee.salary')
+            ->whereDate('attendance.date', $currentDate)
+            ->get();
+    
+        // Pass the current date and the data to the view
+        return view('admin.salary-perdate', compact('salaryData', 'currentDate'));
+    }
+    
+
     public function showallmonth(Request $request)
     {
         try {

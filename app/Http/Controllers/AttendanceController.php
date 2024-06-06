@@ -14,33 +14,43 @@ class AttendanceController extends Controller
         try {
             $user_id = Auth::user()->employeeid;
     
+            // Get today's attendance record
             $attendance = DB::table('attendance')
                 ->where('user_id', $user_id)
                 ->whereDate('date', Carbon::today('Asia/Kolkata'))
                 ->first();
     
-            $currentMonth = Carbon::now('Asia/Kolkata')->month;
-            $previousMonth = Carbon::now('Asia/Kolkata')->subMonth()->month;
+            $currentDate = Carbon::now('Asia/Kolkata');
+            $currentMonth = $currentDate->month;
+            $currentYear = $currentDate->year;
+            $previousMonth = $currentDate->subMonth()->month;
     
-            // Fetch remaining salary for the current month
-            $currentMonthRemainingSalary = DB::table('attendance')
+            // Get the latest attendance record for the current month
+            $lastAttendanceCurrentMonth = DB::table('attendance')
                 ->where('user_id', $user_id)
                 ->whereMonth('date', $currentMonth)
-                ->whereYear('date', Carbon::now('Asia/Kolkata')->year)
-                ->sum('remaining_salary');
+                ->whereYear('date', $currentYear)
+                ->orderBy('date', 'desc')
+                ->first();
     
-            // Fetch remaining salary for the previous month
-            $previousMonthRemainingSalary = DB::table('attendance')
+            $currentMonthRemainingSalary = $lastAttendanceCurrentMonth ? $lastAttendanceCurrentMonth->remaining_salary : 0;
+    
+            // Get the latest attendance record for the previous month
+            $lastAttendancePreviousMonth = DB::table('attendance')
                 ->where('user_id', $user_id)
                 ->whereMonth('date', $previousMonth)
-                ->whereYear('date', Carbon::now('Asia/Kolkata')->year)
-                ->sum('remaining_salary');
+                ->whereYear('date', $currentYear)
+                ->orderBy('date', 'desc')
+                ->first();
+    
+            $previousMonthRemainingSalary = $lastAttendancePreviousMonth ? $lastAttendancePreviousMonth->remaining_salary : 0;
     
             return view('Employee.employeehome', compact('attendance', 'currentMonthRemainingSalary', 'previousMonthRemainingSalary'));
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
 
     public function checkin(Request $request)
 {
@@ -128,7 +138,7 @@ class AttendanceController extends Controller
                 $status = 'Present';
                 $daySalary = $employee->salary / 30;
                 $salaryDeduction = 0;
-            } elseif ($workHours >= 5) {
+            } elseif ( $workHours >= 3 &&  $workHours <= 5) {
                 $status = 'Half Day';
                 $daySalary = ($employee->salary / 2) / 30;
                 $salaryDeduction = ($employee->salary / 2) / 30;
